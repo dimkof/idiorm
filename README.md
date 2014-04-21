@@ -5,7 +5,7 @@ Idiorm
 
 A lightweight nearly-zero-configuration object-relational mapper and fluent query builder for PHP5.
 
-Tested on PHP 5.3.0+
+Tested on PHP 5.3.3+
 
 Released under a [BSD license](http://en.wikipedia.org/wiki/BSD_licenses).
 
@@ -64,6 +64,12 @@ Changelog
 #### 2.x.x - release XXXX-XX-XX
 
 * PSR-4
+* Namespaces
+* Rename classes:
+	- IdiormResultSet => Idiorm\ORMResultSet
+	- IdiormString => Idiorm\ORMString
+	- IdiormStringException => Idiorm\ORMStringException
+* Use of PHP 5.3 static call
 
 #### 1.3.0 - release XXXX-XX-XX
 
@@ -95,7 +101,7 @@ Changelog
 
 #### 1.2.1 - release 2012-11-15
 
-* Fix minor bug caused by \Idiorm\ORMStringException not extending Exception
+* Fix minor bug caused by IdiormStringException not extending Exception
 
 #### 1.2.0 - release 2012-11-14
 
@@ -108,10 +114,10 @@ Changelog
 * Add `select_many` and `select_many_expr` - closing issues [#49](https://github.com/j4mie/idiorm/issues/49) and [#69](https://github.com/j4mie/idiorm/issues/69)
 * Add support for `MIN`, `AVG`, `MAX` and `SUM` - closes [issue #16](https://github.com/j4mie/idiorm/issues/16)
 * Add `group_by_expr` - closes [issue #24](https://github.com/j4mie/idiorm/issues/24)
-* Add `set_expr` to allow database expressions to be set as \Idiorm\ORM properties - closes issues [#59](https://github.com/j4mie/idiorm/issues/59) and [#43](https://github.com/j4mie/idiorm/issues/43) [[brianherbert](https://github.com/brianherbert)]
+* Add `set_expr` to allow database expressions to be set as ORM properties - closes issues [#59](https://github.com/j4mie/idiorm/issues/59) and [#43](https://github.com/j4mie/idiorm/issues/43) [[brianherbert](https://github.com/brianherbert)]
 * Prevent ambiguous column names when joining tables - [issue #66](https://github.com/j4mie/idiorm/issues/66) [[hellogerard](https://github.com/hellogerard)]
 * Add `delete_many` method [[CBeerta](https://github.com/CBeerta)]
-* Allow unsetting of \Idiorm\ORM parameters [[CBeerta](https://github.com/CBeerta)]
+* Allow unsetting of ORM parameters [[CBeerta](https://github.com/CBeerta)]
 * Add `find_array` to get the records as associative arrays [[Surt](https://github.com/Surt)] - closes [issue #17](https://github.com/j4mie/idiorm/issues/17)
 * Fix bug in `_log_query` with `?` and `%` supplied in raw where statements etc. - closes [issue #57](https://github.com/j4mie/idiorm/issues/57) [[ridgerunner](https://github.com/ridgerunner)]
 
