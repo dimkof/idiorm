@@ -61,7 +61,7 @@ Let's See Some Code
 Changelog
 ---------
 
-#### 1.4.x - release XXXX-XX-XX
+#### 2.x.x - release XXXX-XX-XX
 
 * PSR-4
 
