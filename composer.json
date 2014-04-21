@@ -40,5 +40,11 @@
         "psr-4": {
             "Idiorm\\": "src/"
         }
+    },
+    "extra": {
+        "branch-alias": {
+            "dev-PSR-4/master": "2.x.x",
+            "dev-PSR-4/develop": "2.x.x-dev"
+        }
     }
 }
