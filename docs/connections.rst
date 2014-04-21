@@ -10,8 +10,9 @@ provided, it defaults to ``ORM::DEFAULT_CONNECTION``.
 When chaining, once ``for_table()`` has been used in the chain, remaining
 calls in the chain use the correct connection.
 
-::
+.. code-block:: php
 
+    <?php
     // Default connection
     ORM::configure('sqlite:./example.db');
 
@@ -49,8 +50,9 @@ fallback to the default connection when no connection name is passed.
 Instead, passing no connection name (or ``null``) returns the most recent
 query on *any* connection.
 
-::
+.. code-block:: php
 
+    <?php
     // Using default connection, explicitly
     $person = ORM::for_table('person')->find_one(5);
     

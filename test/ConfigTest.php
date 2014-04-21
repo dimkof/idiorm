@@ -14,10 +14,8 @@ class ConfigTest extends PHPUnit_Framework_TestCase {
     }
 
     public function tearDown() {
-        ORM::configure('logging', false);
-        ORM::set_db(null);
-
-        ORM::configure('id_column', 'id');
+        ORM::reset_config();
+        ORM::reset_db();
     }
 
     protected function setUpIdColumnOverrides() {
@@ -95,6 +93,32 @@ class ConfigTest extends PHPUnit_Framework_TestCase {
         $this->assertEquals($expected, ORM::get_last_query());
 
         $this->tearDownIdColumnOverrides();
+    }
+
+    public function testGetConfig() {
+        $this->assertTrue(ORM::get_config('logging'));
+        ORM::configure('logging', false);
+        $this->assertFalse(ORM::get_config('logging'));
+        ORM::configure('logging', true);
+    }
+
+    public function testGetConfigArray() {
+        $expected = array(
+            'connection_string' => 'sqlite::memory:',
+            'id_column' => 'primary_key',
+            'id_column_overrides' => array(),
+            'error_mode' => PDO::ERRMODE_EXCEPTION,
+            'username' => null,
+            'password' => null,
+            'driver_options' => null,
+            'identifier_quote_character' => '`',
+            'logging' => true,
+            'logger' => null,
+            'caching' => false,
+            'return_result_sets' => false,
+            'limit_clause_style' => 'limit',
+        );
+        $this->assertEquals($expected, ORM::get_config());
     }
 
 }

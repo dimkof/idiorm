@@ -12,24 +12,27 @@ Setup
 
 First, ``require`` the Idiorm source file:
 
-::
+.. code-block:: php
 
+    <?php
     require_once 'idiorm.php';
 
 Then, pass a *Data Source Name* connection string to the ``configure``
 method of the ORM class. This is used by PDO to connect to your
 database. For more information, see the `PDO documentation`_.
 
-::
+.. code-block:: php
 
+    <?php
     ORM::configure('sqlite:./example.db');
 
 You may also need to pass a username and password to your database
 driver, using the ``username`` and ``password`` configuration options.
 For example, if you are using MySQL:
 
-::
+.. code-block:: php
 
+    <?php
     ORM::configure('mysql:host=localhost;dbname=my_database');
     ORM::configure('username', 'database_user');
     ORM::configure('password', 'top_secret');
@@ -45,20 +48,32 @@ options on the ORM class. Modifying settings involves passing a
 key/value pair to the ``configure`` method, representing the setting you
 wish to modify and the value you wish to set it to.
 
-::
+.. code-block:: php
 
+    <?php
     ORM::configure('setting_name', 'value_for_setting');
 
 A shortcut is provided to allow passing multiple key/value pairs at
 once.
 
-::
+.. code-block:: php
 
+    <?php
     ORM::configure(array(
         'setting_name_1' => 'value_for_setting_1', 
         'setting_name_2' => 'value_for_setting_2', 
         'etc' => 'etc'
     ));
+
+Use the ``get_config`` method to read current settings.
+
+.. code-block:: php
+
+    <?php
+    $isLoggingEnabled = ORM::get_config('logging');
+    ORM::configure('logging', false);
+    // some crazy loop we don't want to log
+    ORM::configure('logging', $isLoggingEnabled);
 
 Database authentication details
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -70,8 +85,9 @@ to be supplied separately to the DSN string. These settings allow you to
 provide these values. A typical MySQL connection setup might look like
 this:
 
-::
+.. code-block:: php
 
+    <?php
     ORM::configure('mysql:host=localhost;dbname=my_database');
     ORM::configure('username', 'database_user');
     ORM::configure('password', 'top_secret');
@@ -79,10 +95,11 @@ this:
 Or you can combine the connection setup into a single line using the
 configuration array shortcut:
 
-::
+.. code-block:: php
 
+    <?php
     ORM::configure(array(
-        'mysql:host=localhost;dbname=my_database', 
+        'connection_string' => 'mysql:host=localhost;dbname=my_database', 
         'username' => 'database_user', 
         'password' => 'top_secret'
     ));
@@ -95,8 +112,9 @@ Setting: ``return_result_sets``
 Collections of results can be returned as an array (default) or as a result set.
 See the `find_result_set()` documentation for more information.
 
-::
+.. code-block:: php
 
+    <?php
     ORM::configure('return_result_sets', true); // returns result sets
 
 
@@ -116,8 +134,9 @@ through to the PDO constructor. For more information, see `the PDO
 documentation`_. For example, to force the MySQL driver to use UTF-8 for
 the connection:
 
-::
+.. code-block:: php
 
+    <?php
     ORM::configure('driver_options', array(PDO::MYSQL_ATTR_INIT_COMMAND => 'SET NAMES utf8'));
 
 PDO Error Mode
@@ -129,8 +148,9 @@ This can be used to set the ``PDO::ATTR_ERRMODE`` setting on the
 database connection class used by Idiorm. It should be passed one of the
 class constants defined by PDO. For example:
 
-::
+.. code-block:: php
 
+    <?php
     ORM::configure('error_mode', PDO::ERRMODE_WARNING);
 
 The default setting is ``PDO::ERRMODE_EXCEPTION``. For full details of
@@ -172,8 +192,9 @@ Setting: ``id_column``
 This setting is used to configure the name of the primary key column for
 all tables. If your ID column is called ``primary_key``, use:
 
-::
+.. code-block:: php
 
+    <?php
     ORM::configure('id_column', 'primary_key');
 
 Setting: ``id_column_overrides``
@@ -183,12 +204,29 @@ table separately. It takes an associative array mapping table names to
 column names. If, for example, your ID column names include the name of
 the table, you can use the following configuration:
 
-::
+.. code-block:: php
 
+    <?php
     ORM::configure('id_column_overrides', array(
         'person' => 'person_id',
         'role' => 'role_id',
     ));
+
+Limit clause style
+^^^^^^^^^^^^^^^^^^
+
+Setting: ``limit_clause_style``
+
+You can specify the limit clause style in the configuration. This is to facilitate
+a MS SQL style limit clause that uses the ``TOP`` syntax.
+
+Acceptable values are ``ORM::LIMIT_STYLE_TOP_N`` and ``ORM::LIMIT_STYLE_LIMIT``.
+
+.. note::
+
+    If the PDO driver you are using is one of sqlsrv, dblib or mssql then Idiorm
+    will automatically select the ``ORM::LIMIT_STYLE_TOP_N`` for you unless you
+    override the setting.
 
 Query logging
 ^^^^^^^^^^^^^
@@ -202,6 +240,30 @@ When query logging is enabled, you can use two static methods to access
 the log. ``ORM::get_last_query()`` returns the most recent query
 executed. ``ORM::get_query_log()`` returns an array of all queries
 executed.
+
+Query logger
+^^^^^^^^^^^^
+
+Setting: ``logger``
+
+.. note::
+
+    You must enable ``logging`` for this setting to have any effect.
+
+It is possible to supply a ``callable`` to this configuration setting, which will
+be executed for every query that idiorm executes. In PHP a ``callable`` is anything
+that can be executed as if it were a function. Most commonly this will take the
+form of a anonymous function.
+
+This setting is useful if you wish to log queries with an external library as it
+allows you too whatever you would like from inside the callback function.
+
+.. code-block:: php
+
+    <?php
+    ORM::configure('logger', function($log_string) {
+        echo $log_string;
+    });
 
 Query caching
 ^^^^^^^^^^^^^

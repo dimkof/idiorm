@@ -8,8 +8,11 @@ require_once dirname(__FILE__) . '/../idiorm.php';
  *
  */
 class MockPDOStatement extends PDOStatement {
-
    private $current_row = 0;
+   
+   public function __construct() {}
+   public function execute($params) {}
+   
    /**
     * Return some dummy data
     */
@@ -17,8 +20,7 @@ class MockPDOStatement extends PDOStatement {
        if ($this->current_row == 5) {
            return false;
        } else {
-           $this->current_row++;
-           return array('name' => 'Fred', 'age' => 10, 'id' => '1');
+           return array('name' => 'Fred', 'age' => 10, 'id' => ++$this->current_row);
        }
    }
 }
@@ -35,7 +37,7 @@ class MockDifferentPDOStatement extends MockPDOStatement { }
  *
  */
 class MockPDO extends PDO {
-
+   
    /**
     * Return a dummy PDO statement
     */
@@ -58,4 +60,24 @@ class MockDifferentPDO extends MockPDO {
         $this->last_query = new MockDifferentPDOStatement($statement);
         return $this->last_query;
     }
+}
+
+class MockMsSqlPDO extends MockPDO {
+
+   public $fake_driver = 'mssql';
+
+   /**
+    * If we are asking for the name of the driver, check if a fake one
+    * has been set.
+    */
+    public function getAttribute($attribute) {
+        if ($attribute == self::ATTR_DRIVER_NAME) {
+            if (!is_null($this->fake_driver)) {
+                return $this->fake_driver;
+            }
+        }
+        
+        return parent::getAttribute($attribute);
+    }
+    
 }
