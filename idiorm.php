@@ -50,6 +50,10 @@
 
         const DEFAULT_CONNECTION = 'default';
 
+        // Limit clause style
+        const LIMIT_STYLE_TOP_N = "top";
+        const LIMIT_STYLE_LIMIT = "limit";
+
         // ------------------------ //
         // --- CLASS PROPERTIES --- //
         // ------------------------ //
@@ -64,7 +68,9 @@
             'password' => null,
             'driver_options' => null,
             'identifier_quote_character' => null, // if this is null, will be autodetected
+            'limit_clause_style' => null, // if this is null, will be autodetected
             'logging' => false,
+            'logger' => null,
             'caching' => false,
             'return_result_sets' => false,
         );
@@ -197,6 +203,26 @@
         }
 
         /**
+         * Retrieve configuration options by key, or as whole array.
+         * @param string $key
+         * @param string $connection_name Which connection to use
+         */
+        public static function get_config($key = null, $connection_name = self::DEFAULT_CONNECTION) {
+            if ($key) {
+                return self::$_config[$connection_name][$key];
+            } else {
+                return self::$_config[$connection_name];
+            }
+        }
+
+        /**
+         * Delete all configs in _config array.
+         */
+        public static function reset_config() {
+            self::$_config = array();
+        }
+        
+        /**
          * Despite its slightly odd name, this is actually the factory
          * method used to acquire instances of the class. It is named
          * this way for the sake of a readable interface, ie
@@ -206,9 +232,7 @@
          * @param string $connection_name Which connection to use
          * @return ORM
          */
-        public static function for_table($table_name, $connection_name = self::DEFAULT_CONNECTION)
-        {
-            self::_setup_db($connection_name);
+        public static function for_table($table_name, $connection_name = self::DEFAULT_CONNECTION) {
             return new self($table_name, array(), $connection_name);
         }
 
@@ -216,9 +240,9 @@
          * Set up the database connection used by the class
          * @param string $connection_name Which connection to use
          */
-        protected static function _setup_db($connection_name = self::DEFAULT_CONNECTION)
-        {
-            if (!is_object(self::$_db[$connection_name])) {
+        protected static function _setup_db($connection_name = self::DEFAULT_CONNECTION) {
+            if (!array_key_exists($connection_name, self::$_db) ||
+                !is_object(self::$_db[$connection_name])) {
                 self::_setup_db_config($connection_name);
 
                 $db = new PDO(
@@ -234,7 +258,7 @@
         }
 
        /**
-        * Ensures configuration (mulitple connections) is at least set to default.
+        * Ensures configuration (multiple connections) is at least set to default.
         * @param string $connection_name Which connection to use
         */
         protected static function _setup_db_config($connection_name) {
@@ -248,13 +272,23 @@
          * This is public in case the ORM should use a ready-instantiated
          * PDO object as its database connection. Accepts an optional string key
          * to identify the connection if multiple connections are used.
-         * @param ORM $db
+         * @param PDO $db
          * @param string $connection_name Which connection to use
          */
         public static function set_db($db, $connection_name = self::DEFAULT_CONNECTION) {
             self::_setup_db_config($connection_name);
             self::$_db[$connection_name] = $db;
-            self::_setup_identifier_quote_character($connection_name);
+            if(!is_null(self::$_db[$connection_name])) {
+                self::_setup_identifier_quote_character($connection_name);
+                self::_setup_limit_clause_style($connection_name);
+            }
+        }
+
+        /**
+         * Delete all registered PDO objects in _db array.
+         */
+        public static function reset_db() {
+            self::$_db = array();
         }
 
         /**
@@ -267,7 +301,20 @@
         protected static function _setup_identifier_quote_character($connection_name) {
             if (is_null(self::$_config[$connection_name]['identifier_quote_character'])) {
                 self::$_config[$connection_name]['identifier_quote_character'] =
-                     self::_detect_identifier_quote_character($connection_name);
+                    self::_detect_identifier_quote_character($connection_name);
+            }
+        }
+
+        /**
+         * Detect and initialise the limit clause style ("SELECT TOP 5" /
+         * "... LIMIT 5"). If this has been specified manually using 
+         * ORM::configure('limit_clause_style', 'top'), this will do nothing.
+         * @param string $connection_name Which connection to use
+         */
+        public static function _setup_limit_clause_style($connection_name) {
+            if (is_null(self::$_config[$connection_name]['limit_clause_style'])) {
+                self::$_config[$connection_name]['limit_clause_style'] =
+                    self::_detect_limit_clause_style($connection_name);
             }
         }
 
@@ -278,7 +325,7 @@
          * @return string
          */
         protected static function _detect_identifier_quote_character($connection_name) {
-            switch(self::$_db[$connection_name]->getAttribute(PDO::ATTR_DRIVER_NAME)) {
+            switch(self::get_db($connection_name)->getAttribute(PDO::ATTR_DRIVER_NAME)) {
                 case 'pgsql':
                 case 'sqlsrv':
                 case 'dblib':
@@ -295,12 +342,29 @@
         }
 
         /**
+         * Returns a constant after determining the appropriate limit clause
+         * style
+         * @param string $connection_name Which connection to use
+         * @return string Limit clause style keyword/constant
+         */
+        protected static function _detect_limit_clause_style($connection_name) {
+            switch(self::get_db($connection_name)->getAttribute(PDO::ATTR_DRIVER_NAME)) {
+                case 'sqlsrv':
+                case 'dblib':
+                case 'mssql':
+                    return ORM::LIMIT_STYLE_TOP_N;
+                default:
+                    return ORM::LIMIT_STYLE_LIMIT;
+            }
+        }
+
+        /**
          * Returns the PDO instance used by the the ORM to communicate with
          * the database. This can be called if any low-level DB access is
          * required outside the class. If multiple connections are used,
          * accepts an optional key name for the connection.
          * @param string $connection_name Which connection to use
-         * @return ORM
+         * @return PDO
          */
         public static function get_db($connection_name = self::DEFAULT_CONNECTION) {
             self::_setup_db($connection_name); // required in case this is called before Idiorm is instantiated
@@ -342,12 +406,13 @@
         * @return bool Response of PDOStatement::execute()
         */
         protected static function _execute($query, $parameters = array(), $connection_name = self::DEFAULT_CONNECTION) {
-            self::_log_query($query, $parameters, $connection_name);
-            $statement = self::$_db[$connection_name]->prepare($query);
-
+            $statement = self::get_db($connection_name)->prepare($query);
             self::$_last_statement = $statement;
+            $time = microtime(true);
+            $q = $statement->execute($parameters);
+            self::_log_query($query, $parameters, $connection_name, (microtime(true)-$time));
 
-            return $statement->execute($parameters);
+            return $q;
         }
 
         /**
@@ -361,9 +426,10 @@
          * @param string $query
          * @param array $parameters An array of parameters to be bound in to the query
          * @param string $connection_name Which connection to use
+		 * @param float $query_time Query time
          * @return bool
          */
-        protected static function _log_query($query, $parameters, $connection_name) {
+        protected static function _log_query($query, $parameters, $connection_name, $query_time) {
             // If logging is not enabled, do nothing
             if (!self::$_config[$connection_name]['logging']) {
                 return false;
@@ -375,7 +441,7 @@
 
             if (count($parameters) > 0) {
                 // Escape the parameters
-                $parameters = array_map(array(self::$_db[$connection_name], 'quote'), $parameters);
+                $parameters = array_map(array(self::get_db($connection_name), 'quote'), $parameters);
 
                 // Avoid %format collision for vsprintf
                 $query = str_replace("%", "%%", $query);
@@ -395,6 +461,13 @@
 
             self::$_last_query = $bound_query;
             self::$_query_log[$connection_name][] = $bound_query;
+            
+            
+            if(is_callable(self::$_config[$connection_name]['logger'])){
+                $logger = self::$_config[$connection_name]['logger'];
+                $logger($bound_query, $query_time);
+            }
+            
             return true;
         }
 
@@ -414,8 +487,7 @@
                 return '';
             }
 
-            return implode('', array_slice(self::$_query_log[$connection_name], -1));
-            // Used implode(array_slice()) instead of end() to avoid resetting interal array pointer
+            return end(self::$_query_log[$connection_name]);
         }
 
         /**
@@ -618,12 +690,18 @@
             if('*' != $column) {
                 $column = $this->_quote_identifier($column);
             }
+            $result_columns = $this->_result_columns;
+            $this->_result_columns = array();
             $this->select_expr("$sql_function($column)", $alias);
             $result = $this->find_one();
+            $this->_result_columns = $result_columns;
 
             $return_value = 0;
             if($result !== false && isset($result->$alias)) {
-                if((int) $result->$alias == (float) $result->$alias) {
+                if (!is_numeric($result->$alias)) {
+                    $return_value = $result->$alias;
+                }
+                elseif((int) $result->$alias == (float) $result->$alias) {
                     $return_value = (int) $result->$alias;
                 } else {
                     $return_value = (float) $result->$alias;
@@ -938,7 +1016,12 @@
         protected function _add_simple_condition($type, $column_name, $separator, $value) {
             // Add the table name in case of ambiguous columns
             if (count($this->_join_sources) > 0 && strpos($column_name, '.') === false) {
-                $column_name = "{$this->_table_name}.{$column_name}";
+                $table = $this->_table_name;
+                if (!is_null($this->_table_alias)) {
+                    $table = $this->_table_alias;
+                }
+
+                $column_name = "{$table}.{$column_name}";
             }
             $column_name = $this->_quote_identifier($column_name);
             return $this->_add_condition($type, "{$column_name} {$separator} ?", $value);
@@ -1291,13 +1374,19 @@
          * Build the start of the SELECT statement
          */
         protected function _build_select_start() {
+            $fragment = 'SELECT ';
             $result_columns = join(', ', $this->_result_columns);
+
+            if (!is_null($this->_limit) &&
+                self::$_config[$this->_connection_name]['limit_clause_style'] === ORM::LIMIT_STYLE_TOP_N) {
+                $fragment .= "TOP {$this->_limit} ";
+            }
 
             if ($this->_distinct) {
                 $result_columns = 'DISTINCT ' . $result_columns;
             }
 
-            $fragment = "SELECT {$result_columns} FROM " . $this->_quote_identifier($this->_table_name);
+            $fragment .= "{$result_columns} FROM " . $this->_quote_identifier($this->_table_name);
 
             if (!is_null($this->_table_alias)) {
                 $fragment .= " " . $this->_quote_identifier($this->_table_alias);
@@ -1375,14 +1464,17 @@
          * Build LIMIT
          */
         protected function _build_limit() {
-            if (!is_null($this->_limit)) {
-                $clause = 'LIMIT';
-                if (self::$_db[$this->_connection_name]->getAttribute(PDO::ATTR_DRIVER_NAME) == 'firebird') {
-                    $clause = 'ROWS';
+            $fragment = '';
+            if (!is_null($this->_limit) &&
+                self::$_config[$this->_connection_name]['limit_clause_style'] == ORM::LIMIT_STYLE_LIMIT) {
+                if (self::get_db($this->_connection_name)->getAttribute(PDO::ATTR_DRIVER_NAME) == 'firebird') {
+                    $fragment = 'ROWS';
+                } else {
+                    $fragment = 'LIMIT';
                 }
-                return "$clause " . $this->_limit;
+                $fragment .= " {$this->_limit}";
             }
-            return '';
+            return $fragment;
         }
 
         /**
@@ -1391,7 +1483,7 @@
         protected function _build_offset() {
             if (!is_null($this->_offset)) {
                 $clause = 'OFFSET';
-                if (self::$_db[$this->_connection_name]->getAttribute(PDO::ATTR_DRIVER_NAME) == 'firebird') {
+                if (self::get_db($this->_connection_name)->getAttribute(PDO::ATTR_DRIVER_NAME) == 'firebird') {
                     $clause = 'TO';
                 }
                 return "$clause " . $this->_offset;
@@ -1571,7 +1663,7 @@
          * database when save() is called.
          */
         public function set($key, $value = null) {
-            $this->_set_orm_property($key, $value);
+            return $this->_set_orm_property($key, $value);
         }
 
         /**
@@ -1584,7 +1676,7 @@
          * @param string|null $value
          */
         public function set_expr($key, $value = null) {
-            $this->_set_orm_property($key, $value, true);
+            return $this->_set_orm_property($key, $value, true);
         }
 
         /**
@@ -1606,6 +1698,7 @@
                     $this->_expr_fields[$field] = true;
                 }
             }
+            return $this;
         }
 
         /**
@@ -1651,15 +1744,16 @@
             if ($this->_is_new) {
                 $this->_is_new = false;
                 if (is_null($this->id())) {
-                    if(self::$_db[$this->_connection_name]->getAttribute(PDO::ATTR_DRIVER_NAME) == 'pgsql') {
+                    $db = self::get_db($this->_connection_name);
+                    if($db->getAttribute(PDO::ATTR_DRIVER_NAME) == 'pgsql') {
                         $this->_data[$this->_get_id_column_name()] = self::get_last_statement()->fetchColumn();
                     } else {
-                        $this->_data[$this->_get_id_column_name()] = self::$_db[$this->_connection_name]->lastInsertId();
+                        $this->_data[$this->_get_id_column_name()] = $db->lastInsertId();
                     }
                 }
             }
 
-            $this->_dirty_fields = array();
+            $this->_dirty_fields = $this->_expr_fields = array();
             return $success;
         }
 
@@ -1697,7 +1791,7 @@
             $placeholders = $this->_create_placeholders($this->_dirty_fields);
             $query[] = "({$placeholders})";
 
-            if (self::$_db[$this->_connection_name]->getAttribute(PDO::ATTR_DRIVER_NAME) == 'pgsql') {
+            if (self::get_db($this->_connection_name)->getAttribute(PDO::ATTR_DRIVER_NAME) == 'pgsql') {
                 $query[] = 'RETURNING ' . $this->_quote_identifier($this->_get_id_column_name());
             }
 
@@ -1776,6 +1870,48 @@
 
         public function __isset($key) {
             return $this->offsetExists($key);
+        }
+
+        /**
+         * Magic method to capture calls to undefined class methods.
+         * In this case we are attempting to convert camel case formatted 
+         * methods into underscore formatted methods.
+         *
+         * This allows us to call ORM methods using camel case and remain 
+         * backwards compatible.
+         * 
+         * @param  string   $name
+         * @param  array    $arguments
+         * @return ORM
+         */
+        public function __call($name, $arguments)
+        {
+            $method = strtolower(preg_replace('/([a-z])([A-Z])/', '$1_$2', $name));
+
+            if (method_exists($this, $method)) {
+                return call_user_func_array(array($this, $method), $arguments);
+            } else {
+                throw new IdiormMethodMissingException("Method $name() does not exist in class " . get_class($this));
+            }
+        }
+
+        /**
+         * Magic method to capture calls to undefined static class methods. 
+         * In this case we are attempting to convert camel case formatted 
+         * methods into underscore formatted methods.
+         *
+         * This allows us to call ORM methods using camel case and remain 
+         * backwards compatible.
+         * 
+         * @param  string   $name
+         * @param  array    $arguments
+         * @return ORM
+         */
+        public static function __callStatic($name, $arguments)
+        {
+            $method = strtolower(preg_replace('/([a-z])([A-Z])/', '$1_$2', $name));
+
+            return call_user_func_array(array('ORM', $method), $arguments);
         }
     }
 
@@ -2006,7 +2142,11 @@
          */
         public function __call($method, $params = array()) {
             foreach($this->_results as $model) {
-                call_user_func_array(array($model, $method), $params);
+                if (method_exists($model, $method)) {
+                    call_user_func_array(array($model, $method), $params);
+                } else {
+                    throw new IdiormMethodMissingException("Method $method() does not exist in class " . get_class($this));
+                }
             }
             return $this;
         }
@@ -2016,3 +2156,5 @@
      * A placeholder for exceptions eminating from the IdiormString class
      */
     class IdiormStringException extends Exception {}
+
+    class IdiormMethodMissingException extends Exception {}

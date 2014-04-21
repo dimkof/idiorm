@@ -1,7 +1,16 @@
 Idiorm
 ======
 
+[![Build Status](https://travis-ci.org/j4mie/idiorm.png?branch=master)](https://travis-ci.org/j4mie/idiorm) [![Latest Stable Version](https://poser.pugx.org/j4mie/idiorm/v/stable.png)](https://packagist.org/packages/j4mie/idiorm) [![Total Downloads](https://poser.pugx.org/j4mie/idiorm/downloads.png)](https://packagist.org/packages/j4mie/idiorm)
+
 [http://j4mie.github.com/idiormandparis/](http://j4mie.github.com/idiormandparis/)
+
+---
+### Feature complete
+
+Idiorm is now considered to be feature complete as of version 1.4.0. Whilst it will continue to be maintained with bug fixes there will be no further new features added.
+
+---
 
 A lightweight nearly-zero-configuration object-relational mapper and fluent query builder for PHP5.
 
@@ -19,10 +28,11 @@ Features
 * Built on top of [PDO](http://php.net/pdo).
 * Uses [prepared statements](http://uk.php.net/manual/en/pdo.prepared-statements.php) throughout to protect against [SQL injection](http://en.wikipedia.org/wiki/SQL_injection) attacks.
 * Requires no model classes, no XML configuration and no code generation: works out of the box, given only a connection string.
-* Consists of just one class called `ORM`. Minimal global namespace pollution.
-* Database agnostic. Currently supports SQLite and MySQL. May support others, please give it a try!
+* Consists of one main class called `ORM`. Additional classes are prefixed with `Idiorm`. Minimal global namespace pollution.
+* Database agnostic. Currently supports SQLite, MySQL, Firebird and PostgreSQL. May support others, please give it a try!
 * Supports collections of models with method chaining to filter or apply actions to multiple results at once.
 * Multiple connections supported
+* PSR-1 compliant methods (any method can be called in camelCase instead of underscores eg. `find_many()` becomes `findMany()`) - you'll need PHP 5.3+
 
 Documentation
 -------------
@@ -40,29 +50,63 @@ The documentation will now be in docs/_build/html/index.html
 Let's See Some Code
 -------------------
 
-    $user = ORM::for_table('user')
-        ->where_equal('username', 'j4mie')
-        ->find_one();
+```php
+$user = ORM::for_table('user')
+    ->where_equal('username', 'j4mie')
+    ->find_one();
 
-    $user->first_name = 'Jamie';
-    $user->save();
+$user->first_name = 'Jamie';
+$user->save();
 
-    $tweets = ORM::for_table('tweet')
-        ->select('tweet.*')
-        ->join('user', array(
-            'user.id', '=', 'tweet.user_id'
-        ))
-        ->where_equal('user.username', 'j4mie')
-        ->find_many();
+$tweets = ORM::for_table('tweet')
+    ->select('tweet.*')
+    ->join('user', array(
+        'user.id', '=', 'tweet.user_id'
+    ))
+    ->where_equal('user.username', 'j4mie')
+    ->find_many();
 
-    foreach ($tweets as $tweet) {
-        echo $tweet->text;
-    }
+foreach ($tweets as $tweet) {
+    echo $tweet->text;
+}
+```
 
 Changelog
 ---------
 
-#### 1.3.0 - release XXXX-XX-XX
+#### 1.5.0 - release 2014-01-XX
+
+* Reduce the type casting on aggregate functions to allow characters [[herroffizier](https://github.com/herroffizier)] - [issue #150](https://github.com/j4mie/idiorm/issues/150)
+* Prevent invalid method calls from triggering infinite recursion [[michaelward82](https://github.com/michaelward82)] - [issue #152](https://github.com/j4mie/idiorm/issues/152)
+* Add time to query logging - adds query time parameter to external logger callback function [[AgelxNash](https://github.com/AgelxNash)] - [issue #180](https://github.com/j4mie/idiorm/issues/180)
+* Changed database array access to ensure it's always properly setup [[falmp](https://github.com/falmp)] - [issue #159](https://github.com/j4mie/idiorm/issues/159)
+* Allow unsetting the db (ORM::set_db(null)) to make the test work again [[borrel](https://github.com/borrel)] - [issue #160](https://github.com/j4mie/idiorm/issues/160)
+* Add HHVM to travis-ci build matrix [[ptarjan](https://github.com/ptarjan)] - [issue #168](https://github.com/j4mie/idiorm/issues/168)
+
+#### 1.4.1 - release 2013-12-12
+
+**Patch update to remove a broken pull request** - may have consequences for users of 1.4.0 that exploited the "`find_many()` now returns an associative array with the databases primary ID as the array keys" change that was merged in 1.4.0.
+
+* Back out pull request/issue [#133](https://github.com/j4mie/idiorm/pull/133) as it breaks backwards compatibility in previously unexpected ways (see [#162](https://github.com/j4mie/idiorm/pull/162), [#156](https://github.com/j4mie/idiorm/issues/156) and [#133](https://github.com/j4mie/idiorm/pull/133#issuecomment-29063108)) - sorry for merging this change into Idiorm - closes [issue 156](https://github.com/j4mie/idiorm/issues/156)
+
+#### 1.4.0 - release 2013-09-05
+
+* `find_many()` now returns an associative array with the databases primary ID as the array keys [[Surt](https://github.com/Surt)] - [issue #133](https://github.com/j4mie/idiorm/issues/133)
+* Calls to `set()` and `set_expr()` return `$this` allowing them to be chained [[Surt](https://github.com/Surt)]
+* Add PSR-1 compliant camelCase method calls to Idiorm (PHP 5.3+ required) [[crhayes](https://github.com/crhayes)] - [issue #108](https://github.com/j4mie/idiorm/issues/108)
+* Add static method `get_config()` to access current configuration [[javierd](https://github.com/mikejestes)] - [issue #141](https://github.com/j4mie/idiorm/issues/141)
+* Add logging callback functionality [[lalop](https://github.com/lalop)] - [issue #130](https://github.com/j4mie/idiorm/issues/130)
+* Add support for MS SQL ``TOP`` limit style (automatically used for PDO drivers: sqlsrv, dblib and mssql) [[numkem](https://github.com/numkem)] - [issue #116](https://github.com/j4mie/idiorm/issues/116)
+* Uses table aliases in `WHERE` clauses [[vicvicvic](https://github.com/vicvicvic)] - [issue #140](https://github.com/j4mie/idiorm/issues/140)
+* Ignore result columns when calling an aggregate function [[tassoevan](https://github.com/tassoevan)] - [issue #120](https://github.com/j4mie/idiorm/issues/120)
+* Improve documentation [[bruston](https://github.com/bruston)] - [issue #111](https://github.com/j4mie/idiorm/issues/111)
+* Improve PHPDoc on `get_db()` [[mailopl](https://github.com/mailopl)] - [issue #106](https://github.com/j4mie/idiorm/issues/106)
+* Improve documentation [[sjparsons](https://github.com/sjparsons)] - [issue #103](https://github.com/j4mie/idiorm/issues/103)
+* Make tests/bootstrap.php HHVM compatible [[JoelMarcey](https://github.com/JoelMarcey)] - [issue #143](https://github.com/j4mie/idiorm/issues/143)
+* Fix docblock [[ulrikjohansson](https://github.com/ulrikjohansson)] - [issue #147](https://github.com/j4mie/idiorm/issues/147)
+* Fix incorrect variable name in querying documentation [[fridde](https://github.com/fridde)] - [issue #146](https://github.com/j4mie/idiorm/issues/146)
+
+#### 1.3.0 - release 2013-01-31
 
 * Documentation moved to [idiorm.rtfd.org](http://idiorm.rtfd.org) and now built using [Sphinx](http://sphinx-doc.org/)
 * Add support for multiple database connections - closes [issue #15](https://github.com/j4mie/idiorm/issues/15) [[tag](https://github.com/tag)]
