@@ -5,7 +5,7 @@ Idiorm
 
 A lightweight nearly-zero-configuration object-relational mapper and fluent query builder for PHP5.
 
-Tested on PHP 5.2.0+ - may work on earlier versions with PDO and the correct database drivers.
+Tested on PHP 5.3.0+
 
 Released under a [BSD license](http://en.wikipedia.org/wiki/BSD_licenses).
 
@@ -19,7 +19,6 @@ Features
 * Built on top of [PDO](http://php.net/pdo).
 * Uses [prepared statements](http://uk.php.net/manual/en/pdo.prepared-statements.php) throughout to protect against [SQL injection](http://en.wikipedia.org/wiki/SQL_injection) attacks.
 * Requires no model classes, no XML configuration and no code generation: works out of the box, given only a connection string.
-* Consists of just one class called `ORM`. Minimal global namespace pollution.
 * Database agnostic. Currently supports SQLite and MySQL. May support others, please give it a try!
 * Supports collections of models with method chaining to filter or apply actions to multiple results at once.
 * Multiple connections supported
@@ -40,14 +39,14 @@ The documentation will now be in docs/_build/html/index.html
 Let's See Some Code
 -------------------
 
-    $user = ORM::for_table('user')
+    $user = \Idiorm\ORM::for_table('user')
         ->where_equal('username', 'j4mie')
         ->find_one();
 
     $user->first_name = 'Jamie';
     $user->save();
 
-    $tweets = ORM::for_table('tweet')
+    $tweets = \Idiorm\ORM::for_table('tweet')
         ->select('tweet.*')
         ->join('user', array(
             'user.id', '=', 'tweet.user_id'
@@ -61,6 +60,10 @@ Let's See Some Code
 
 Changelog
 ---------
+
+#### 1.4.x - release XXXX-XX-XX
+
+* PSR-4
 
 #### 1.3.0 - release XXXX-XX-XX
 
@@ -92,7 +95,7 @@ Changelog
 
 #### 1.2.1 - release 2012-11-15
 
-* Fix minor bug caused by IdiormStringException not extending Exception
+* Fix minor bug caused by \Idiorm\ORMStringException not extending Exception
 
 #### 1.2.0 - release 2012-11-14
 
@@ -105,10 +108,10 @@ Changelog
 * Add `select_many` and `select_many_expr` - closing issues [#49](https://github.com/j4mie/idiorm/issues/49) and [#69](https://github.com/j4mie/idiorm/issues/69)
 * Add support for `MIN`, `AVG`, `MAX` and `SUM` - closes [issue #16](https://github.com/j4mie/idiorm/issues/16)
 * Add `group_by_expr` - closes [issue #24](https://github.com/j4mie/idiorm/issues/24)
-* Add `set_expr` to allow database expressions to be set as ORM properties - closes issues [#59](https://github.com/j4mie/idiorm/issues/59) and [#43](https://github.com/j4mie/idiorm/issues/43) [[brianherbert](https://github.com/brianherbert)]
+* Add `set_expr` to allow database expressions to be set as \Idiorm\ORM properties - closes issues [#59](https://github.com/j4mie/idiorm/issues/59) and [#43](https://github.com/j4mie/idiorm/issues/43) [[brianherbert](https://github.com/brianherbert)]
 * Prevent ambiguous column names when joining tables - [issue #66](https://github.com/j4mie/idiorm/issues/66) [[hellogerard](https://github.com/hellogerard)]
 * Add `delete_many` method [[CBeerta](https://github.com/CBeerta)]
-* Allow unsetting of ORM parameters [[CBeerta](https://github.com/CBeerta)]
+* Allow unsetting of \Idiorm\ORM parameters [[CBeerta](https://github.com/CBeerta)]
 * Add `find_array` to get the records as associative arrays [[Surt](https://github.com/Surt)] - closes [issue #17](https://github.com/j4mie/idiorm/issues/17)
 * Fix bug in `_log_query` with `?` and `%` supplied in raw where statements etc. - closes [issue #57](https://github.com/j4mie/idiorm/issues/57) [[ridgerunner](https://github.com/ridgerunner)]
 
